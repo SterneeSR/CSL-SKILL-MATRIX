@@ -12,9 +12,10 @@ and deliberately follows that command's interaction style: numbered menus,
 All user input goes through an injectable ``input_fn`` (default: builtins
 ``input``) so the menus can be scripted in tests.
 """
-from django.db.models import Count, ProtectedError
+from django.db.models import Count, Max, ProtectedError
 
 from apps.skills.models import Skill, SkillCategory, SubSkill
+
 
 
 class SkillManagementCLI:
@@ -469,7 +470,7 @@ class SkillManagementCLI:
 
     def list_sub_skills(self):
         sub_skills = SubSkill.objects.select_related("skill", "skill__category").order_by(
-            "skill__category__name", "skill__name", "name"
+            "skill__category__name", "skill__name", "display_order", "id"
         )
         self.write("\nSUB-SKILLS\n")
         if not sub_skills:
@@ -498,10 +499,12 @@ class SkillManagementCLI:
             return
 
         description = self.prompt("Description (optional, Enter to skip): ")
+        max_order = SubSkill.objects.filter(skill=skill).aggregate(Max("display_order"))["display_order__max"] or 0
         sub_skill = SubSkill.objects.create(
             skill=skill,
             name=name,
             description=description,
+            display_order=max_order + 1,
         )
         self.success(f"✓ Sub-skill '{skill.name} / {sub_skill.name}' created.")
 
@@ -565,7 +568,7 @@ class SkillManagementCLI:
             )
 
     def select_sub_skill(self, skill):
-        sub_skills = list(skill.sub_skills.order_by("name"))
+        sub_skills = list(skill.sub_skills.order_by("display_order", "id"))
         if not sub_skills:
             self.write(f"Skill '{skill.name}' has no sub-skills yet.")
             return None

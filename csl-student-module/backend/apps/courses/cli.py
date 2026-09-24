@@ -460,7 +460,7 @@ class CourseManagementCLI:
         """Displays required skills and subskills formatted as a tree per category."""
         course_skills = list(
             course.course_skills.select_related("skill__category", "sub_skill").order_by(
-                "skill__category__name", "skill__name", "sub_skill__name"
+                "skill__category__name", "skill__name", "sub_skill__display_order", "sub_skill__id"
             )
         )
 
@@ -559,7 +559,7 @@ class CourseManagementCLI:
         skill = skills[int(skill_sel) - 1]
 
         # Step 3: Active SubSkills in Skill
-        sub_skills = list(skill.sub_skills.filter(is_active=True).order_by("name"))
+        sub_skills = list(skill.sub_skills.filter(is_active=True).order_by("display_order", "id"))
         if not sub_skills:
             # Skill has no subskills: check if whole skill can be mapped
             self.write(f"\nSkill '{skill.name}' has no subskills.")

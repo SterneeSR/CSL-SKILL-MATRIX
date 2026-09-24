@@ -213,3 +213,36 @@ class SkillTaxonomyModelTests(TestCase):
         self.category.delete()
         self.assertEqual(Skill.objects.count(), 0)
         self.assertEqual(SubSkill.objects.count(), 0)
+
+    def test_subskill_creation_order_preserved(self):
+        # Create subskills in a specific, non-alphabetical order
+        s1 = SubSkill.objects.create(skill=self.skill, name="Zeta", display_order=1)
+        s2 = SubSkill.objects.create(skill=self.skill, name="Alpha", display_order=2)
+        s3 = SubSkill.objects.create(skill=self.skill, name="Beta", display_order=3)
+
+        subskills = list(SubSkill.objects.filter(skill=self.skill).exclude(name="Fundamentals"))
+        self.assertEqual([s.name for s in subskills], ["Zeta", "Alpha", "Beta"])
+
+    def test_subskill_renaming_does_not_change_order(self):
+        s1 = SubSkill.objects.create(skill=self.skill, name="Step 1", display_order=1)
+        s2 = SubSkill.objects.create(skill=self.skill, name="Step 2", display_order=2)
+        # Rename Step 1 to 'Zebra Step' (alphabetically after Step 2)
+        s1.name = "Zebra Step"
+        s1.save()
+
+        subskills = list(SubSkill.objects.filter(skill=self.skill).exclude(name="Fundamentals"))
+        self.assertEqual([s.name for s in subskills], ["Zebra Step", "Step 2"])
+
+    def test_subskill_cli_add_assigns_next_order(self):
+        out = StringIO()
+        # Category 1 -> Skill 1 -> name -> description
+        cli = make_cli(out, ["1", "1", "First Added", ""])
+        cli.add_sub_skill()
+        first = SubSkill.objects.get(name="First Added")
+        self.assertGreater(first.display_order, 0)
+
+        cli2 = make_cli(out, ["1", "1", "Second Added", ""])
+        cli2.add_sub_skill()
+        second = SubSkill.objects.get(name="Second Added")
+        self.assertEqual(second.display_order, first.display_order + 1)
+

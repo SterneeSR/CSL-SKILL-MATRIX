@@ -10,6 +10,7 @@ import { ProtectedRoute } from './routes/ProtectedRoute';
 import { StudentLayout } from './layouts/StudentLayout';
 import { StudentDashboardPage } from './pages/student/StudentDashboardPage';
 import { StudentProfilePage } from './pages/student/StudentProfilePage';
+import { StudentSkillsPage } from './pages/student/StudentSkillsPage';
 import { ComingSoonPage } from './pages/student/ComingSoonPage';
 
 interface UserData {
@@ -87,7 +88,7 @@ export default function App() {
         >
           <Route index element={<StudentDashboardPage />} />
           <Route path="profile" element={<StudentProfilePage />} />
-          <Route path="skills" element={<ComingSoon module="Skills" />} />
+          <Route path="skills" element={<StudentSkillsPage />} />
           <Route path="activities" element={<ComingSoon module="Activities" />} />
           <Route path="performance" element={<ComingSoon module="Performance" />} />
           <Route path="leaderboard" element={<ComingSoon module="Leaderboard" />} />

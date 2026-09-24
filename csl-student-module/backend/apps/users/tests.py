@@ -72,3 +72,115 @@ class StudentProfileAPITests(TestCase):
         self.client.force_authenticate(user=self.tutor_user)
         response = self.client.get("/api/student/profile/")
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+
+class StudentSkillsAPITests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.student = User.objects.create_user(
+            username="student_skills@example.com",
+            email="student_skills@example.com",
+            password="testpassword123",
+            first_name="Sam",
+            last_name="Student",
+            role=User.Role.STUDENT,
+            status=User.AccountStatus.ACTIVE,
+        )
+        self.other_student = User.objects.create_user(
+            username="other_student@example.com",
+            email="other_student@example.com",
+            password="testpassword123",
+            first_name="Other",
+            last_name="One",
+            role=User.Role.STUDENT,
+            status=User.AccountStatus.ACTIVE,
+        )
+        self.tutor = User.objects.create_user(
+            username="tutor_skills@example.com",
+            email="tutor_skills@example.com",
+            password="testpassword123",
+            first_name="Prof",
+            role=User.Role.TUTOR,
+            status=User.AccountStatus.ACTIVE,
+        )
+
+        from apps.skills.models import SkillCategory, Skill, SubSkill
+        from apps.courses.models import CourseSkill
+
+        self.category = SkillCategory.objects.create(name="Programming")
+        self.skill = Skill.objects.create(category=self.category, name="Python")
+        self.sub1 = SubSkill.objects.create(skill=self.skill, name="Fundamentals", display_order=1)
+        self.sub2 = SubSkill.objects.create(skill=self.skill, name="Control Flow", display_order=2)
+        self.sub3 = SubSkill.objects.create(skill=self.skill, name="OOP", display_order=3)
+
+        self.course = Course.objects.create(name="Computer Science", code="CS101")
+        self.batch = Batch.objects.create(course=self.course, name="2026-A", start_date="2026-01-01")
+
+        CourseSkill.objects.create(course=self.course, skill=self.skill, sub_skill=self.sub1)
+        CourseSkill.objects.create(course=self.course, skill=self.skill, sub_skill=self.sub2)
+        CourseSkill.objects.create(course=self.course, skill=self.skill, sub_skill=self.sub3)
+
+    def test_unauthenticated_request_fails(self):
+        response = self.client.get("/api/student/skills/")
+        self.assertIn(response.status_code, [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN])
+
+    def test_non_student_cannot_access_skills(self):
+        self.client.force_authenticate(user=self.tutor)
+        response = self.client.get("/api/student/skills/")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_unassigned_student_receives_empty_state(self):
+        self.client.force_authenticate(user=self.student)
+        response = self.client.get("/api/student/skills/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertIsNone(data["course"])
+        self.assertIsNone(data["batch"])
+        self.assertEqual(data["skills"], [])
+
+    def test_assigned_student_receives_required_skills_in_order(self):
+        profile, _ = StudentProfile.objects.get_or_create(
+            user=self.student,
+            defaults={"registration_number": "CSL9001", "first_name": "Sam"},
+        )
+        profile.course = self.course
+        profile.batch = self.batch
+        profile.save()
+
+        self.client.force_authenticate(user=self.student)
+        response = self.client.get("/api/student/skills/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+
+        self.assertEqual(data["course"]["code"], "CS101")
+        self.assertEqual(data["course"]["name"], "Computer Science")
+        self.assertEqual(data["batch"]["name"], "2026-A")
+        self.assertEqual(len(data["skills"]), 1)
+
+        skill_data = data["skills"][0]
+        self.assertEqual(skill_data["name"], "Python")
+        self.assertEqual(skill_data["status"], "UNASSESSED")
+
+        sub_names = [s["name"] for s in skill_data["subskills"]]
+        self.assertEqual(sub_names, ["Fundamentals", "Control Flow", "OOP"])
+        for s in skill_data["subskills"]:
+            self.assertEqual(s["status"], "UNASSESSED")
+
+    def test_student_cannot_access_another_students_skills(self):
+        # Even if request has query parameters or manipulated data, session decides user
+        profile, _ = StudentProfile.objects.get_or_create(
+            user=self.student,
+            defaults={"registration_number": "CSL9001", "first_name": "Sam"},
+        )
+        profile.course = self.course
+        profile.batch = self.batch
+        profile.save()
+
+        # other_student is unassigned
+        self.client.force_authenticate(user=self.other_student)
+        response = self.client.get(f"/api/student/skills/?student_id={self.student.id}")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertIsNone(data["course"])
+        self.assertEqual(data["skills"], [])
+

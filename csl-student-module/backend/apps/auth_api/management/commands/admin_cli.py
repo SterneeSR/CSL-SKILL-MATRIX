@@ -5,6 +5,8 @@ from django.contrib.auth import get_user_model
 
 from apps.skills.cli import SkillManagementCLI
 from apps.courses.cli import CourseManagementCLI
+from apps.courses.models import Course, Batch
+from apps.users.models import StudentProfile
 
 User = get_user_model()
 
@@ -165,19 +167,22 @@ class Command(BaseCommand):
         while True:
             self.stdout.write("\nUSER MANAGEMENT\n")
             self.stdout.write("1. View Users")
-            self.stdout.write("2. Delete User")
-            self.stdout.write("3. Back\n")
+            self.stdout.write("2. Assign Student Course/Batch")
+            self.stdout.write("3. Delete User")
+            self.stdout.write("4. Back\n")
 
             choice = self.input_fn("Select option: ").strip()
 
             if choice == "1":
                 self.view_users()
             elif choice == "2":
-                self.delete_user()
+                self.assign_student_course_batch()
             elif choice == "3":
+                self.delete_user()
+            elif choice == "4" or choice.lower() == "b":
                 break
             else:
-                self.stdout.write(self.style.WARNING("Invalid option. Please choose 1, 2, or 3."))
+                self.stdout.write(self.style.WARNING("Invalid option. Please choose 1, 2, 3, or 4."))
 
     def view_users(self):
         users = list(User.objects.all().order_by("created_at"))
@@ -204,6 +209,113 @@ class Command(BaseCommand):
             self.stdout.write("-" * 65)
 
         self.input_fn("\nPress Enter to return to User Management...")
+
+    def assign_student_course_batch(self):
+        # Only students are assignable
+        students = list(
+            User.objects.filter(role=User.Role.STUDENT)
+            .select_related("student_profile", "student_profile__course", "student_profile__batch")
+            .order_by("email")
+        )
+        self.stdout.write("\nASSIGN STUDENT COURSE & BATCH\n")
+        if not students:
+            self.stdout.write("No students found in database.\n")
+            return
+
+        self.stdout.write("-" * 65)
+        for idx, student in enumerate(students, start=1):
+            name = student.first_name or "(not set)"
+            profile = getattr(student, "student_profile", None)
+            course_name = profile.course.name if profile and profile.course else "Not assigned"
+            batch_name = profile.batch.name if profile and profile.batch else "Not assigned"
+            self.stdout.write(
+                f"{idx}. {student.email} ({name})\n"
+                f"   Current Course: {course_name} | Batch: {batch_name}"
+            )
+            self.stdout.write("-" * 65)
+        self.stdout.write("B. Back\n")
+
+        selection = self.input_fn("Select student number (or B to cancel): ").strip()
+        if selection.lower() == "b":
+            return
+        if not selection.isdigit() or not (1 <= int(selection) <= len(students)):
+            self.stdout.write(self.style.WARNING("Invalid student selection."))
+            return
+
+        selected_student = students[int(selection) - 1]
+
+        # Student must have a StudentProfile (create if not exists)
+        profile, _ = StudentProfile.objects.get_or_create(
+            user=selected_student,
+            defaults={
+                "registration_number": f"CSL{selected_student.id:04d}",
+                "first_name": selected_student.first_name or "Student",
+                "last_name": selected_student.last_name or "",
+            },
+        )
+
+        cur_course = profile.course.name if profile.course else "Not assigned"
+        cur_batch = profile.batch.name if profile.batch else "Not assigned"
+        self.stdout.write(f"\nSTUDENT: {selected_student.email}")
+        self.stdout.write("Current Assignment:")
+        self.stdout.write(f"Course: {cur_course}")
+        self.stdout.write(f"Batch: {cur_batch}\n")
+
+        # Step 1: Select active Course
+        courses = list(Course.objects.filter(is_active=True).order_by("code"))
+        if not courses:
+            self.stdout.write(self.style.WARNING("No active courses available."))
+            return
+
+        self.stdout.write("Select Course:")
+        for idx, c in enumerate(courses, start=1):
+            self.stdout.write(f"{idx}. {c.name} ({c.code})")
+        self.stdout.write("B. Back\n")
+
+        c_sel = self.input_fn("Select course number (or B to cancel): ").strip()
+        if c_sel.lower() == "b":
+            return
+        if not c_sel.isdigit() or not (1 <= int(c_sel) <= len(courses)):
+            self.stdout.write(self.style.WARNING("Invalid course selection."))
+            return
+        selected_course = courses[int(c_sel) - 1]
+
+        # Step 2: Select active Batch belonging to that Course
+        batches = list(Batch.objects.filter(course=selected_course, is_active=True).order_by("name"))
+        if not batches:
+            self.stdout.write(self.style.WARNING(f"Course '{selected_course.name}' has no active batches."))
+            return
+
+        self.stdout.write(f"\nSelect Batch for {selected_course.name}:")
+        for idx, b in enumerate(batches, start=1):
+            self.stdout.write(f"{idx}. {b.name}")
+        self.stdout.write("B. Back\n")
+
+        b_sel = self.input_fn("Select batch number (or B to cancel): ").strip()
+        if b_sel.lower() == "b":
+            return
+        if not b_sel.isdigit() or not (1 <= int(b_sel) <= len(batches)):
+            self.stdout.write(self.style.WARNING("Invalid batch selection."))
+            return
+        selected_batch = batches[int(b_sel) - 1]
+
+        # Step 3: Confirmation required before saving
+        confirm = self.input_fn(
+            f"\nAssign {selected_student.email} to Course '{selected_course.name}' and Batch '{selected_batch.name}'? (y/n): "
+        ).strip().lower()
+
+        if confirm != "y":
+            self.stdout.write("Assignment cancelled.")
+            return
+
+        profile.course = selected_course
+        profile.batch = selected_batch
+        profile.save(update_fields=["course", "batch", "updated_at"])
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"✓ Student {selected_student.email} assigned to {selected_course.code} / {selected_batch.name}."
+            )
+        )
 
     def delete_user(self):
         users = list(User.objects.all().order_by("created_at"))

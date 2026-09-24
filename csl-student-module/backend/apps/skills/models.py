@@ -50,11 +50,12 @@ class SubSkill(models.Model):
     name = models.CharField(max_length=150)
     description = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
+    display_order = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ["skill", "name"]
+        ordering = ["skill", "display_order", "id"]
         constraints = [
             models.UniqueConstraint(
                 fields=["skill", "name"],

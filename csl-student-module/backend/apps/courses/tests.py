@@ -85,6 +85,35 @@ class AdminCliCourseMenuTests(TestCase):
         self.assertIn("Course 'CS101 - Computer Science' created.", output)
         self.assertTrue(Course.objects.filter(code="CS101").exists())
 
+    def test_assign_student_course_batch_cli(self):
+        student = User.objects.create_user(
+            username="student_assign@example.com",
+            email="student_assign@example.com",
+            password="testpassword123",
+            first_name="Jane",
+            role=User.Role.STUDENT,
+            status=User.AccountStatus.ACTIVE,
+        )
+        course = Course.objects.create(name="Data Science", code="DS101", is_active=True)
+        batch = Batch.objects.create(course=course, name="2026-Alpha", start_date="2026-01-01", is_active=True)
+
+        # In admin_cli:
+        # 2: User Management
+        # 2: Assign Student Course/Batch
+        # 1: Select Student 1
+        # 1: Select Course 1
+        # 1: Select Batch 1
+        # y: Confirm
+        # 4: Back to Main Menu
+        # 5: Exit
+        output = self._run(["2", "2", "1", "1", "1", "y", "4", "5"])
+        self.assertIn("assigned to DS101 / 2026-Alpha", output)
+
+        student_profile = StudentProfile.objects.get(user=student)
+        self.assertEqual(student_profile.course, course)
+        self.assertEqual(student_profile.batch, batch)
+
+
 
 class CourseManagementCLITests(TestCase):
     """Targeted tests for Course, Batch, and CourseSkill CLI logic."""
