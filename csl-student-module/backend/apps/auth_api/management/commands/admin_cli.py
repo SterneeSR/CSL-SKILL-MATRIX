@@ -4,6 +4,7 @@ from django.db.models import ProtectedError
 from django.contrib.auth import get_user_model
 
 from apps.skills.cli import SkillManagementCLI
+from apps.courses.cli import CourseManagementCLI
 
 User = get_user_model()
 
@@ -54,7 +55,8 @@ class Command(BaseCommand):
             self.stdout.write(f"1. Pending Users ({pending_count})")
             self.stdout.write("2. User Management")
             self.stdout.write("3. Skill Management")
-            self.stdout.write("4. Exit\n")
+            self.stdout.write("4. Course Management")
+            self.stdout.write("5. Exit\n")
 
             choice = self.input_fn("Select option: ").strip()
 
@@ -65,10 +67,12 @@ class Command(BaseCommand):
             elif choice == "3":
                 SkillManagementCLI(self, input_fn=self.input_fn).main_menu()
             elif choice == "4":
+                CourseManagementCLI(self, input_fn=self.input_fn).main_menu()
+            elif choice == "5":
                 self.stdout.write("Exiting Admin CLI. Goodbye!")
                 break
             else:
-                self.stdout.write(self.style.WARNING("Invalid option. Please choose 1, 2, 3, or 4."))
+                self.stdout.write(self.style.WARNING("Invalid option. Please choose 1, 2, 3, 4, or 5."))
 
     def pending_users_menu(self):
         while True:

@@ -64,13 +64,14 @@ class AdminCliSkillMenuTests(TestCase):
         return out.getvalue()
 
     def test_main_menu_lists_skill_management(self):
-        output = self._run(["4"])
+        output = self._run(["5"])
         self.assertIn("3. Skill Management", output)
+        self.assertIn("4. Course Management", output)
         self.assertIn("Exiting Admin CLI", output)
 
     def test_skill_management_entry_point_opens(self):
-        # 3 opens Skill Management, 5 goes back, 4 exits the admin CLI.
-        output = self._run(["3", "5", "4"])
+        # 3 opens Skill Management, 5 goes back, 5 exits the admin CLI.
+        output = self._run(["3", "5", "5"])
         self.assertIn("SKILL MANAGEMENT", output)
         self.assertIn("Manage Categories", output)
         self.assertIn("Manage Skills", output)
@@ -78,20 +79,20 @@ class AdminCliSkillMenuTests(TestCase):
         self.assertIn("Exiting Admin CLI", output)
 
     def test_add_category_through_cli(self):
-        output = self._run(["3", "2", "2", "Programming", "", "6", "5", "4"])
+        output = self._run(["3", "2", "2", "Programming", "", "6", "5", "5"])
         self.assertIn("Category 'Programming' created.", output)
         self.assertTrue(SkillCategory.objects.filter(name="Programming").exists())
 
     def test_add_skill_through_cli(self):
         SkillCategory.objects.create(name="Programming")
-        output = self._run(["3", "3", "2", "1", "Python", "", "6", "5", "4"])
+        output = self._run(["3", "3", "2", "1", "Python", "", "6", "5", "5"])
         self.assertIn("Programming / Python' created.", output)
         self.assertTrue(Skill.objects.filter(name="Python").exists())
 
     def test_add_sub_skill_through_cli(self):
         category = SkillCategory.objects.create(name="Programming")
         Skill.objects.create(category=category, name="Python")
-        output = self._run(["3", "4", "2", "1", "1", "OOP", "", "6", "5", "4"])
+        output = self._run(["3", "4", "2", "1", "1", "OOP", "", "6", "5", "5"])
         self.assertIn("Python / OOP' created.", output)
         self.assertTrue(SubSkill.objects.filter(name="OOP").exists())
 
@@ -99,7 +100,7 @@ class AdminCliSkillMenuTests(TestCase):
         category = SkillCategory.objects.create(name="Programming")
         skill = Skill.objects.create(category=category, name="Python")
         SubSkill.objects.create(skill=skill, name="Fundamentals")
-        output = self._run(["3", "1", "", "5", "4"])
+        output = self._run(["3", "1", "", "5", "5"])
         self.assertIn("Programming", output)
         self.assertIn("└── Python", output)
         self.assertIn("└── Fundamentals", output)
@@ -109,7 +110,7 @@ class AdminCliSkillMenuTests(TestCase):
         category = SkillCategory.objects.create(name="Programming")
         skill = Skill.objects.create(category=category, name="Python")
         SubSkill.objects.create(skill=skill, name="Fundamentals")
-        output = self._run(["3", "2", "5", "1", "y", "6", "5", "4"])
+        output = self._run(["3", "2", "5", "1", "y", "6", "5", "5"])
         self.assertIn("Category 'Programming' deleted.", output)
         self.assertEqual(SkillCategory.objects.count(), 0)
         self.assertEqual(Skill.objects.count(), 0)

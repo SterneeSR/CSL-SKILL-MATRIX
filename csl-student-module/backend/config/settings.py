@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
 import os
+import sys
 from pathlib import Path
 from dotenv import load_dotenv
 load_dotenv()
@@ -88,16 +89,24 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('DATABASE_NAME', 'csl_db'),
-        'USER': os.getenv('DATABASE_USER', 'postgres'),
-        'PASSWORD': os.getenv('DATABASE_PASSWORD', ''),
-        'HOST': os.getenv('DATABASE_HOST', 'localhost'),
-        'PORT': os.getenv('DATABASE_PORT', '5432'),
+if 'test' in sys.argv or os.getenv('DB_ENGINE') == 'sqlite':
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': ':memory:',
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.getenv('DATABASE_NAME', 'csl_db'),
+            'USER': os.getenv('DATABASE_USER', 'postgres'),
+            'PASSWORD': os.getenv('DATABASE_PASSWORD', ''),
+            'HOST': os.getenv('DATABASE_HOST', 'localhost'),
+            'PORT': os.getenv('DATABASE_PORT', '5432'),
+        }
+    }
 
 
 # Password validation
