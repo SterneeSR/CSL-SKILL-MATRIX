@@ -37,3 +37,84 @@ export interface StudentSkillsResponse {
   skills: StudentSkill[];
 }
 
+export interface StudentDashboardIdentity {
+  name: string;
+  student_id: string;
+  course: string | null;
+  course_code: string | null;
+  batch: string | null;
+}
+
+export interface StudentDashboardSkills {
+  available: boolean;
+  total_skills: number;
+  total_subskills: number;
+  assessed: number;
+  unassessed: number;
+  assessed_subskills: number;
+  unassessed_subskills: number;
+}
+
+export interface StudentDashboardPerformance {
+  score: number | null;
+  status: string;
+  message: string;
+}
+
+export interface StudentDashboardActivities {
+  available: boolean;
+  total: number;
+  pending: number;
+  message: string;
+}
+
+export interface StudentDashboardResponse {
+  student: StudentDashboardIdentity;
+  skills: StudentDashboardSkills;
+  performance: StudentDashboardPerformance;
+  activities: StudentDashboardActivities;
+}
+
+
+
+export interface StudentActivitySummary {
+  id: number;
+  title: string;
+  type: string;
+  description: string;
+  course: string;
+  batch: string | null;
+  due_date: string | null;
+  max_marks: number;
+  status: string;
+}
+
+export interface StudentActivitiesResponse {
+  activities: StudentActivitySummary[];
+}
+
+export interface CoveredSubSkill {
+  id: number;
+  name: string;
+}
+
+export interface CoveredSkill {
+  id: number;
+  name: string;
+  subskills: CoveredSubSkill[];
+}
+
+export interface StudentActivityDetail {
+  id: number;
+  title: string;
+  type: string;
+  description: string;
+  course: string;
+  course_code: string;
+  batch: string | null;
+  due_date: string | null;
+  max_marks: number;
+  status: string;
+  skills_covered: CoveredSkill[];
+  created_at: string;
+}

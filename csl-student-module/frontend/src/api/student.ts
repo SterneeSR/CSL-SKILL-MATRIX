@@ -1,5 +1,11 @@
-import { apiClient } from './client';
-import type { StudentProfile, StudentSkillsResponse } from '../types/student';
+﻿import { apiClient } from './client';
+import type {
+  StudentProfile,
+  StudentSkillsResponse,
+  StudentDashboardResponse,
+  StudentActivitiesResponse,
+  StudentActivityDetail,
+} from '../types/student';
 
 /**
  * Fetch the profile of the currently authenticated student.
@@ -18,3 +24,26 @@ export async function getStudentSkills(): Promise<StudentSkillsResponse> {
   return res.data;
 }
 
+/**
+ * Fetch dashboard overview data for the currently authenticated student.
+ */
+export async function getStudentDashboard(): Promise<StudentDashboardResponse> {
+  const res = await apiClient.get<StudentDashboardResponse>('/student/dashboard/');
+  return res.data;
+}
+
+/**
+ * Fetch all activities assigned to the currently authenticated student.
+ */
+export async function getStudentActivities(): Promise<StudentActivitiesResponse> {
+  const res = await apiClient.get<StudentActivitiesResponse>('/student/activities/');
+  return res.data;
+}
+
+/**
+ * Fetch details of a specific activity for the currently authenticated student.
+ */
+export async function getStudentActivityDetail(id: number | string): Promise<StudentActivityDetail> {
+  const res = await apiClient.get<StudentActivityDetail>(`/student/activities/${id}/`);
+  return res.data;
+}
